@@ -4,6 +4,7 @@ import { Clock, Download, RotateCcw, Pencil, Check, X } from 'lucide-react'
 import Modal from '../Modal'
 import TranscriptLines from '../TranscriptLines'
 import { useEditSessionKeepAlive } from '../../hooks/useEditSessionKeepAlive'
+import { isPreview } from '../../lib/firebase'
 
 interface OffsetTranscriptCardProps {
   originalTranscription: string
@@ -142,10 +143,10 @@ export default function OffsetTranscriptCard({ originalTranscription, jobId, fil
         )}
         {offsetText !== null && (
           <span style={{ display: 'inline-flex', gap: '8px', marginLeft: 'auto' }}>
-            <button onClick={() => handleDownload('pdf')} disabled={downloading} className="btn btn-soft btn-sm">
+            <button onClick={() => handleDownload('pdf')} disabled={isPreview || downloading} className="btn btn-soft btn-sm">
               <Download size={13} /> {downloading ? 'Downloading...' : 'PDF'}
             </button>
-            <button onClick={() => handleDownload('docx')} disabled={downloading} className="btn btn-soft btn-sm">
+            <button onClick={() => handleDownload('docx')} disabled={isPreview || downloading} className="btn btn-soft btn-sm">
               <Download size={13} /> {downloading ? 'Downloading...' : 'DOCX'}
             </button>
           </span>

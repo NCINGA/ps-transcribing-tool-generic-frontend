@@ -9,6 +9,7 @@ import type { FileRecord, TranscriptLanguage } from '../types'
 import Modal from '../components/Modal'
 import Pagination from '../components/Pagination'
 import PageHeader from '../components/PageHeader'
+import { isPreview } from '../lib/firebase'
 
 const LANGUAGES: TranscriptLanguage[] = ['english', 'sinhala', 'tamil', 'raw']
 
@@ -78,7 +79,7 @@ function LanguageTile({
         </div>
       )}
       {state === 'idle' && (
-        <button onClick={() => onGenerate(fileId, language)} className="btn btn-soft btn-sm lang-tile-btn">
+        <button onClick={() => onGenerate(fileId, language)} disabled={isPreview} className="btn btn-soft btn-sm lang-tile-btn">
           <Sparkles size={13} /> Generate
         </button>
       )}
@@ -261,7 +262,7 @@ export default function FilesPage() {
             <button onClick={load} disabled={busy} className="btn btn-secondary">
               <RefreshCw size={15} className={busy ? 'spin' : ''} /> {busy ? 'Working...' : 'Refresh'}
             </button>
-            <button onClick={handleUploadClick} disabled={!!activeUpload} className="btn btn-primary">
+            <button onClick={handleUploadClick} disabled={isPreview || !!activeUpload} className="btn btn-primary">
               {activeUpload ? <Loader2 size={16} className="spin" /> : <UploadCloud size={16} />}
               {activeUpload ? 'Uploading...' : 'Upload'}
             </button>
@@ -329,7 +330,7 @@ export default function FilesPage() {
                     </span>
                     <button
                       onClick={() => handleDelete(file.id, file.filename)}
-                      disabled={deleting === file.id}
+                      disabled={isPreview || deleting === file.id}
                       className="btn btn-ghost btn-icon"
                       title="Delete file"
                       aria-label={`Delete ${file.filename}`}

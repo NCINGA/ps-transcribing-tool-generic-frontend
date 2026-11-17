@@ -14,6 +14,7 @@ import { zeroFillDaily } from '../utils/usage'
 export default function DashboardPage() {
   const [jobs, setJobs] = useState<Job[]>([])
   const [loading, setLoading] = useState(true)
+  const [error, setError] = useState('')
   const [page, setPage] = useState(1)
   const [total, setTotal] = useState(0)
   const [stats, setStats] = useState({ total: 0, completed: 0, processing: 0, failed: 0, english: 0, sinhala: 0, tamil: 0, raw: 0 })
@@ -30,7 +31,9 @@ export default function DashboardPage() {
         setJobs(jobsData.jobs)
         setTotal(jobsData.total)
         setStats(statsData)
+        setError('')
       })
+      .catch((e: unknown) => setError(e instanceof Error ? e.message : 'Could not load the dashboard.'))
       .finally(() => setLoading(false))
   }, [page])
 
@@ -70,6 +73,7 @@ export default function DashboardPage() {
       <div style={{ marginBottom: '28px' }}>
         <h1 className="page-title">Dashboard</h1>
       </div>
+      {error && <div className="alert danger" role="alert">{error}</div>}
 
       <div className="grid grid-2 mb-20">
         <PieChartCard

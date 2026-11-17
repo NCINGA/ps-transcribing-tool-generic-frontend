@@ -1,14 +1,11 @@
 import { useEffect, useRef, useState } from 'react'
-import keycloak from '../lib/keycloak'
+import { firebaseAuth } from '../lib/firebase'
 
 const REFRESH_INTERVAL_MS = 60_000
 const FAILURE_WARNING_THRESHOLD = 3
 
 /**
- * Keeps the Keycloak session alive with a refresh every minute for as long
- * as `active` is true -- deliberately scoped to an in-progress edit rather
- * than the whole app, so the normal idle-timeout still applies everywhere
- * else (see AuthContext.tsx for why a blanket background refresh isn't used).
+ * Checks the Firebase session every minute during an edit.
  * The first two consecutive refresh failures fail silently -- only the 3rd
  * consecutive failure (3 minutes in) sets `sessionAtRisk`, so a single
  * transient network blip doesn't alarm the user mid-edit.
@@ -18,15 +15,17 @@ export function useEditSessionKeepAlive(active: boolean): { sessionAtRisk: boole
   const failureCountRef = useRef(0)
 
   useEffect(() => {
-    if (!active) {
+    if (!active || !firebaseAuth) {
       failureCountRef.current = 0
       setSessionAtRisk(false)
       return
     }
 
+    const auth = firebaseAuth
     const interval = setInterval(async () => {
       try {
-        await keycloak.updateToken(30)
+        if (!auth.currentUser) throw new Error('Session expired')
+        await auth.currentUser.getIdToken()
         failureCountRef.current = 0
         setSessionAtRisk(false)
       } catch {

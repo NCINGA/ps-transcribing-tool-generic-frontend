@@ -73,7 +73,7 @@ export interface Risk {
 
 export type UserGroup = 'user' | 'admin' | 'superadmin';
 
-export interface KeycloakUserRecord {
+export interface UserRecord {
   user_id: string;
   email: string | null;
   first_name: string | null;

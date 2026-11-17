@@ -1,6 +1,7 @@
 window.__APP_CONFIG__ = {
   apiBaseUrl: "${VITE_API_BASE_URL}",
-  keycloakUrl: "${VITE_KEYCLOAK_URL}",
-  keycloakRealm: "${VITE_KEYCLOAK_REALM}",
-  keycloakClientId: "${VITE_KEYCLOAK_CLIENT_ID}",
+  firebaseApiKey: "${VITE_FIREBASE_API_KEY}",
+  firebaseAuthDomain: "${VITE_FIREBASE_AUTH_DOMAIN}",
+  firebaseProjectId: "${VITE_FIREBASE_PROJECT_ID}",
+  firebaseAppId: "${VITE_FIREBASE_APP_ID}",
 };

@@ -3,7 +3,7 @@ import { createPortal } from 'react-dom'
 import { useNavigate } from 'react-router-dom'
 import { useAuth } from '../contexts/AuthContext'
 import { fetchUsers, createUser, deleteUser, resetPassword } from '../api'
-import type { KeycloakUserRecord, UserGroup } from '../types'
+import type { UserRecord, UserGroup } from '../types'
 import Modal from '../components/Modal'
 import CredentialsModal from '../components/CredentialsModal'
 import PageHeader from '../components/PageHeader'
@@ -57,19 +57,19 @@ export default function UsersPage() {
   const { isAdmin, isSuperAdmin, user, logout } = useAuth()
   const navigate = useNavigate()
 
-  const canDeleteUser = (target: KeycloakUserRecord): boolean => {
+  const canDeleteUser = (target: UserRecord): boolean => {
     if (target.user_id === user?.uid) return false
     if (isSuperAdmin) return true
     return target.group === 'user'
   }
 
-  const canResetPassword = (target: KeycloakUserRecord): boolean => {
+  const canResetPassword = (target: UserRecord): boolean => {
     if (isSuperAdmin) return true
     if (target.user_id === user?.uid) return true
     return target.group === 'user'
   }
 
-  const [users, setUsers] = useState<KeycloakUserRecord[]>([])
+  const [users, setUsers] = useState<UserRecord[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
 
@@ -81,7 +81,7 @@ export default function UsersPage() {
   const [createdCredentials, setCreatedCredentials] = useState<{ email: string; temporary_password: string } | null>(null)
   const [resetCredentials, setResetCredentials] = useState<{ email: string; temporary_password: string; isSelf: boolean } | null>(null)
   const [confirmDelete, setConfirmDelete] = useState<{ id: string; label: string } | null>(null)
-  const [confirmReset, setConfirmReset] = useState<KeycloakUserRecord | null>(null)
+  const [confirmReset, setConfirmReset] = useState<UserRecord | null>(null)
   const [deleting, setDeleting] = useState<string | null>(null)
   const [resetting, setResetting] = useState<string | null>(null)
   const [alertMsg, setAlertMsg] = useState<string | null>(null)
@@ -162,7 +162,7 @@ export default function UsersPage() {
     setCreateError(null)
   }
 
-  const handleDeleteClick = (u: KeycloakUserRecord) => {
+  const handleDeleteClick = (u: UserRecord) => {
     setConfirmDelete({ id: u.user_id, label: u.email || u.user_id })
   }
 
@@ -181,7 +181,7 @@ export default function UsersPage() {
     }
   }
 
-  const handleResetPassword = async (u: KeycloakUserRecord) => {
+  const handleResetPassword = async (u: UserRecord) => {
     setResetting(u.user_id)
     try {
       const result = await resetPassword(u.user_id)
@@ -333,7 +333,7 @@ export default function UsersPage() {
       {confirmDelete && (
         <Modal
           title="Remove user"
-          message={`Remove "${confirmDelete.label}" from Keycloak? This cannot be undone.`}
+          message={`Remove "${confirmDelete.label}"? This cannot be undone.`}
           confirmLabel="Remove"
           cancelLabel="Cancel"
           danger

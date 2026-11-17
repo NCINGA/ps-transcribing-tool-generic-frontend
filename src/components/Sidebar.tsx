@@ -3,6 +3,7 @@ import { LayoutDashboard, FileAudio, ListChecks, Users, LogOut, Wifi, WifiOff, A
 import { useAuth } from '../contexts/AuthContext'
 import { useConnectivity } from '../contexts/ConnectivityContext'
 import { BRAND } from '../config/brand'
+import { isPreview } from '../lib/firebase'
 
 function initialsOf(name: string): string {
   const parts = name.trim().split(/\s+/).filter(Boolean)
@@ -39,14 +40,14 @@ export default function Sidebar() {
         <i className="conn-dot" />
       </div>
 
-      <div className="sidebar-user">
+      {!isPreview && <div className="sidebar-user">
         <div className="avatar" style={{ background: 'var(--brand-gradient)' }}>{initialsOf(displayName)}</div>
         <div className="sidebar-user-text" title={displayName}>
           <div className="sidebar-user-name">{displayName}</div>
           <div className="sidebar-user-role">{roleLabel}</div>
         </div>
         <button onClick={logout} className="signout" title="Sign out" aria-label="Sign out"><LogOut size={17} /></button>
-      </div>
+      </div>}
     </aside>
   )
 }

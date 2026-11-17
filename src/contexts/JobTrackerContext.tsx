@@ -139,9 +139,7 @@ export function JobTrackerProvider({ children }: { children: ReactNode }) {
       }
       return
     }
-    // Guard against a duplicate interval from React 18/19 StrictMode's
-    // double-invoked effects in dev -- same issue AuthContext already had
-    // to work around for Keycloak init.
+    // Guard against a duplicate interval when effects are restarted in development.
     if (intervalRef.current) return
 
     intervalRef.current = setInterval(tick, POLL_INTERVAL_MS)

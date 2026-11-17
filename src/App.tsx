@@ -11,6 +11,7 @@ import DashboardPage from './pages/DashboardPage'
 import TranscriptPage from './pages/TranscriptPage'
 import UsersPage from './pages/UsersPage'
 import AssignedActionItemsPage from './pages/AssignedActionItemsPage'
+import { isPreview } from './lib/firebase'
 import './index.css'
 
 function Layout({ children }: { children: ReactNode }) {
@@ -26,6 +27,11 @@ function Layout({ children }: { children: ReactNode }) {
     <>
       <Sidebar />
       <main ref={mainRef} style={{ flex: 1, minWidth: 0, overflowY: 'auto', height: '100vh' }}>
+        {isPreview && (
+          <div role="status" className="alert" style={{ margin: '16px 24px 0' }}>
+            Preview mode. Browse a sample meeting and transcript while the app is being configured.
+          </div>
+        )}
         {children}
       </main>
     </>

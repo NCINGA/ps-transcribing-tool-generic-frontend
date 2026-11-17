@@ -1,22 +1,14 @@
-import type { ActionItem, FileRecord, Job, TranscriptLanguage, KeycloakUserRecord, UserGroup, UsageStats, MonthlyUsageGauge, OrgUsageByLaptop } from './types'
-import keycloak from './lib/keycloak'
-
-// Injected at container start via config.js -- see keycloak.ts for details.
-const BASE = (window as { __APP_CONFIG__?: Record<string, string> }).__APP_CONFIG__?.apiBaseUrl
-if (!BASE) throw new Error('Missing __APP_CONFIG__.apiBaseUrl -- config.js was not injected correctly')
+import type { ActionItem, FileRecord, Job, TranscriptLanguage, UserRecord, UserGroup, UsageStats, MonthlyUsageGauge, OrgUsageByLaptop } from './types'
+import { apiBaseUrl as BASE, firebaseAuth, isPreview } from './lib/firebase'
+import { previewFile, previewJob, previewUsage } from './preview'
 
 async function authHeaders(extra?: HeadersInit): Promise<HeadersInit> {
-  if (keycloak.authenticated) {
-    try {
-      await keycloak.updateToken(30)
-    } catch {
-      keycloak.login()
-    }
-  }
-  return {
-    ...(keycloak.token ? { Authorization: `Bearer ${keycloak.token}` } : {}),
-    ...extra,
-  }
+  if (isPreview) throw new Error('This action requires a connected app.')
+  const user = firebaseAuth?.currentUser
+  if (!user) throw new Error('Sign in to continue.')
+  const headers = new Headers(extra)
+  headers.set('Authorization', `Bearer ${await user.getIdToken()}`)
+  return headers
 }
 
 function extractErrorMessage(detail: unknown): string {
@@ -31,8 +23,7 @@ function extractErrorMessage(detail: unknown): string {
 
 async function handle<T>(res: Response): Promise<T> {
   if (res.status === 401) {
-    await keycloak.login()
-    throw new Error('Session expired. Please sign in again.')
+    throw new Error('The backend did not accept your sign-in.')
   }
   if (!res.ok) {
     const err = await res.json().catch(() => ({}))
@@ -42,6 +33,7 @@ async function handle<T>(res: Response): Promise<T> {
 }
 
 export async function fetchFiles(page = 1, pageSize = 10): Promise<{ files: FileRecord[]; total: number }> {
+  if (isPreview) return { files: page === 1 ? [previewFile] : [], total: 1 }
   const res = await fetch(`${BASE}/v1/files?page=${page}&page_size=${pageSize}`, { headers: await authHeaders() })
   return handle(res)
 }
@@ -56,11 +48,16 @@ export async function triggerJob(file_id: string, language: TranscriptLanguage):
 }
 
 export async function fetchJob(job_id: string): Promise<Job> {
+  if (isPreview) {
+    if (job_id === previewJob.id) return previewJob
+    throw new Error('Preview transcript not found.')
+  }
   const res = await fetch(`${BASE}/v1/jobs/${job_id}`, { headers: await authHeaders() })
   return handle(res)
 }
 
 export async function fetchAllJobs(page = 1, pageSize = 10): Promise<{ jobs: Job[]; total: number }> {
+  if (isPreview) return { jobs: page === 1 ? [previewJob] : [], total: 1 }
   const res = await fetch(`${BASE}/v1/jobs?page=${page}&page_size=${pageSize}`, { headers: await authHeaders() })
   return handle(res)
 }
@@ -69,6 +66,7 @@ export async function fetchJobStats(): Promise<{
   total: number; completed: number; processing: number; failed: number
   english: number; sinhala: number; tamil: number; raw: number
 }> {
+  if (isPreview) return { total: 1, completed: 1, processing: 0, failed: 0, english: 1, sinhala: 0, tamil: 0, raw: 0 }
   const res = await fetch(`${BASE}/v1/jobs/stats`, { headers: await authHeaders() })
   const data = await handle<{ stats: {
     total: number; completed: number; processing: number; failed: number
@@ -150,6 +148,13 @@ export async function fetchAssignedActionItems(): Promise<{
   id: string; filename: string; completed_at: string | null
   action_items: ActionItem[]; action_items_done: number[]
 }[]> {
+  if (isPreview) return [{
+    id: previewJob.id,
+    filename: previewJob.filename,
+    completed_at: previewJob.completed_at,
+    action_items: previewJob.action_items ?? [],
+    action_items_done: [],
+  }]
   const res = await fetch(`${BASE}/v1/jobs/action-items/assigned`, { headers: await authHeaders() })
   const data = await handle<{ jobs: { id: string; filename: string; completed_at: string | null; action_items: ActionItem[]; action_items_done: number[] }[] }>(res)
   return data.jobs
@@ -222,9 +227,9 @@ export async function downloadOffsetDocx(job_id: string, transcript_text: string
 
 // --- User management (admin-only) ---
 
-export async function fetchUsers(): Promise<KeycloakUserRecord[]> {
+export async function fetchUsers(): Promise<UserRecord[]> {
   const res = await fetch(`${BASE}/v1/users`, { headers: await authHeaders() })
-  const data = await handle<{ users: KeycloakUserRecord[] }>(res)
+  const data = await handle<{ users: UserRecord[] }>(res)
   return data.users
 }
 
@@ -252,11 +257,13 @@ export async function deleteUser(userId: string): Promise<void> {
 }
 
 export async function fetchUsage(days = 30): Promise<UsageStats> {
+  if (isPreview) return previewUsage(days)
   const res = await fetch(`${BASE}/v1/jobs/usage?days=${days}`, { headers: await authHeaders() })
   return handle(res)
 }
 
 export async function fetchLaptopUsage(days = 30): Promise<UsageStats> {
+  if (isPreview) return previewUsage(days)
   const res = await fetch(`${BASE}/v1/jobs/usage/laptop?days=${days}`, { headers: await authHeaders() })
   return handle(res)
 }
@@ -270,11 +277,13 @@ export async function resetPassword(userId: string): Promise<{ user_id: string; 
 }
 
 export async function fetchOrgUsage(): Promise<MonthlyUsageGauge> {
+  if (isPreview) return { quota_hours: 60, total_hours: 480 / 3600, used_within_quota: 480 / 3600, overage_hours: 0 }
   const res = await fetch(`${BASE}/v1/jobs/org-usage`, { headers: await authHeaders() })
   return handle(res)
 }
 
 export async function fetchOrgUsageByLaptop(): Promise<OrgUsageByLaptop> {
+  if (isPreview) return { laptops: [{ laptop_id: 'sample', label: 'Sample workstation', hours: 480 / 3600 }] }
   const res = await fetch(`${BASE}/v1/jobs/org-usage/by-laptop`, { headers: await authHeaders() })
   return handle(res)
 }

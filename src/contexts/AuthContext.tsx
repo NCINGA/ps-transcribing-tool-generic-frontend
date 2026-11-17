@@ -1,5 +1,6 @@
-import { createContext, useCallback, useContext, useEffect, useRef, useState, type ReactNode } from 'react'
-import keycloak from '../lib/keycloak'
+import { createContext, useContext, useEffect, useState, type ReactNode } from 'react'
+import { GoogleAuthProvider, onIdTokenChanged, signInWithPopup, signOut } from 'firebase/auth'
+import { firebaseAuth } from '../lib/firebase'
 
 export interface AuthUser {
   uid: string
@@ -14,85 +15,66 @@ interface AuthContextValue {
   loading: boolean
   isAdmin: boolean
   isSuperAdmin: boolean
-  login: () => void
-  logout: () => void
-  getToken: () => Promise<string | null>
+  login: () => Promise<void>
+  logout: () => Promise<void>
 }
 
 const AuthContext = createContext<AuthContextValue | undefined>(undefined)
 
-function buildUser(): AuthUser | null {
-  if (!keycloak.authenticated || !keycloak.tokenParsed) return null
-  const parsed = keycloak.tokenParsed as Record<string, unknown>
-  const realmAccess = parsed.realm_access as { roles?: string[] } | undefined
+async function login() {
+  if (firebaseAuth) await signInWithPopup(firebaseAuth, new GoogleAuthProvider())
+}
 
-  return {
-    uid: keycloak.subject ?? '',
-    username: (parsed.preferred_username as string) ?? '',
-    email: (parsed.email as string) ?? null,
-    name: (parsed.name as string) ?? null,
-    roles: new Set(realmAccess?.roles ?? []),
-  }
+async function logout() {
+  if (firebaseAuth) await signOut(firebaseAuth)
 }
 
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<AuthUser | null>(null)
-  const [loading, setLoading] = useState(true)
-  const initialized = useRef(false)
+  const [loading, setLoading] = useState(firebaseAuth !== null)
 
   useEffect(() => {
-
-    if (initialized.current) return
-    initialized.current = true
-
-    keycloak
-      .init({
-        onLoad: 'login-required',
-        pkceMethod: 'S256',
-        checkLoginIframe: false,
-      })
-      .then(() => {
-        setUser(buildUser())
-        setLoading(false)
-      })
-      .catch(() => {
+    if (!firebaseAuth) return
+    const auth = firebaseAuth
+    let active = true
+    const unsubscribe = onIdTokenChanged(auth, async identity => {
+      if (!active) return
+      if (!identity) {
         setUser(null)
         setLoading(false)
-      })
+        return
+      }
+      try {
+        const { claims } = await identity.getIdTokenResult()
+        if (!active || auth.currentUser !== identity) return
+        const roles = Array.isArray(claims.roles)
+          ? claims.roles.filter((role): role is string => typeof role === 'string')
+          : []
+        setUser({
+          uid: identity.uid,
+          username: identity.email ?? identity.uid,
+          email: identity.email,
+          name: identity.displayName,
+          roles: new Set(roles),
+        })
+      } catch {
+        if (!active || auth.currentUser !== identity) return
+        setUser(null)
+      }
+      setLoading(false)
+    })
 
-    // keycloak.onTokenExpired = () => {
-    //   keycloak
-    //     .updateToken(30)
-    //     .then(() => setUser(buildUser()))
-    //     .catch(() => {
-    //       // Don't force a redirect here -- let the next API call's own
-    //       // updateToken attempt (in api.ts) decide whether to redirect.
-    //       // Redirecting immediately on every transient refresh failure is
-    //       // what turns a single hiccup into a fast reload loop.
-    //     })
-    // }
-  }, [])
-
-  const login = useCallback(() => keycloak.login(), [])
-  const logout = useCallback(() => keycloak.logout({ redirectUri: window.location.origin }), [])
-
-  const getToken = useCallback(async (): Promise<string | null> => {
-    if (!keycloak.authenticated) return null
-    try {
-      await keycloak.updateToken(30)
-    } catch {
-      keycloak.login()
-      return null
+    return () => {
+      active = false
+      unsubscribe()
     }
-    return keycloak.token ?? null
   }, [])
 
-  const roles = user?.roles ?? new Set<string>()
-  const isAdmin = roles.has('role-admin') || roles.has('role-superadmin')
-  const isSuperAdmin = roles.has('role-superadmin')
+  const isSuperAdmin = user?.roles.has('role-superadmin') ?? false
+  const isAdmin = isSuperAdmin || (user?.roles.has('role-admin') ?? false)
 
   return (
-    <AuthContext.Provider value={{ user, loading, isAdmin, isSuperAdmin, login, logout, getToken }}>
+    <AuthContext.Provider value={{ user, loading, isAdmin, isSuperAdmin, login, logout }}>
       {children}
     </AuthContext.Provider>
   )

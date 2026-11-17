@@ -2,6 +2,7 @@ import { useNavigate } from 'react-router-dom'
 import { ChevronLeft, Download, FileText, Languages, Layers, CalendarCheck, ScanSearch } from 'lucide-react'
 import type { Job } from '../../types'
 import { downloadJobPdf, downloadJobDocx } from '../../api'
+import { isPreview } from '../../lib/firebase'
 
 export default function TranscriptHeader({ job }: { job: Job }) {
   const navigate = useNavigate()
@@ -27,10 +28,10 @@ export default function TranscriptHeader({ job }: { job: Job }) {
           </div>
         </div>
         <div style={{ display: 'flex', gap: '10px', flexShrink: 0 }}>
-          <button onClick={() => downloadJobPdf(job.id, `${job.filename}_${job.language}.pdf`)} className="btn btn-primary">
+          <button onClick={() => downloadJobPdf(job.id, `${job.filename}_${job.language}.pdf`)} disabled={isPreview} className="btn btn-primary">
             <Download size={15} /> Download PDF
           </button>
-          <button onClick={() => downloadJobDocx(job.id, `${job.filename}_${job.language}.docx`)} className="btn btn-secondary">
+          <button onClick={() => downloadJobDocx(job.id, `${job.filename}_${job.language}.docx`)} disabled={isPreview} className="btn btn-secondary">
             <Download size={15} /> Download DOCX
           </button>
         </div>

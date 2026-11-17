@@ -3,6 +3,7 @@ import { Pencil, Check, X, ScrollText } from 'lucide-react'
 import Modal from '../Modal'
 import TranscriptLines from '../TranscriptLines'
 import { useEditSessionKeepAlive } from '../../hooks/useEditSessionKeepAlive'
+import { isPreview } from '../../lib/firebase'
 
 interface TranscriptCardProps {
   fullTranscription: string
@@ -59,7 +60,7 @@ export default function TranscriptCard({ fullTranscription, onSave }: Transcript
           )}
           <button
             onClick={() => isEditing ? setShowSaveConfirm(true) : setShowEditConfirm(true)}
-            disabled={saving}
+            disabled={isPreview || saving}
             className={`btn btn-sm ${isEditing ? 'btn-primary' : 'btn-secondary'}`}
           >
             {isEditing ? <Check size={14} /> : <Pencil size={14} />}
