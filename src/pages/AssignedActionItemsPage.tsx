@@ -1,11 +1,11 @@
 import { useEffect, useState } from 'react'
 import { Loader2, ListChecks, FileAudio } from 'lucide-react'
-import { fetchAssignedActionItems } from '../api'
+import { fetchActionItems } from '../api'
 import type { ActionItem } from '../types'
 import ActionItemsSection from '../components/transcript/ActionItemsSection'
 import PageHeader from '../components/PageHeader'
 
-interface AssignedJob {
+interface JobWithActionItems {
   id: string
   filename: string
   completed_at: string | null
@@ -14,18 +14,18 @@ interface AssignedJob {
 }
 
 export default function AssignedActionItemsPage() {
-  const [jobs, setJobs] = useState<AssignedJob[] | null>(null)
+  const [jobs, setJobs] = useState<JobWithActionItems[] | null>(null)
   const [error, setError] = useState<string | null>(null)
 
   useEffect(() => {
-    fetchAssignedActionItems()
+    fetchActionItems()
       .then(setJobs)
       .catch((e: unknown) => setError(e instanceof Error ? e.message : 'Failed to load action items'))
   }, [])
 
   return (
     <div className="page">
-      <PageHeader title="Action Items" subtitle="Meetings where you have an action item. You can see everyone's items, but only tick your own." />
+      <PageHeader title="Action Items" subtitle="Track shared action items from recent meetings." />
 
       {error && <div className="alert danger">{error}</div>}
 
@@ -35,7 +35,7 @@ export default function AssignedActionItemsPage() {
         <div className="card">
           <div className="empty">
             <span className="icon-chip"><ListChecks size={24} /></span>
-            <h3>No action items assigned to you</h3>
+            <h3>No action items yet</h3>
           </div>
         </div>
       ) : (

@@ -143,7 +143,7 @@ export async function updateTranscript(job_id: string, full_transcription: strin
   await handle(res)
 }
 
-export async function fetchAssignedActionItems(): Promise<{
+export async function fetchActionItems(): Promise<{
   id: string; filename: string; completed_at: string | null
   action_items: ActionItem[]; action_items_done: number[]
 }[]> {
@@ -154,7 +154,7 @@ export async function fetchAssignedActionItems(): Promise<{
     action_items: previewJob.action_items ?? [],
     action_items_done: [],
   }]
-  const res = await fetch(`${BASE}/v1/jobs/action-items/assigned`, { headers: await authHeaders() })
+  const res = await fetch(`${BASE}/v1/jobs/action-items`, { headers: await authHeaders() })
   const data = await handle<{ jobs: { id: string; filename: string; completed_at: string | null; action_items: ActionItem[]; action_items_done: number[] }[] }>(res)
   return data.jobs
 }
