@@ -13,10 +13,10 @@ jobs:
     runs-on: ubuntu-latest
 
     env:
-      PROJECT_ID: ""        # TODO: GCP project id
-      REGION: ""            # TODO: Artifact Registry region, e.g. asia-southeast1
-      REPOSITORY: ""        # TODO: Artifact Registry repository name
-      SERVICE_NAME: ""      # TODO: image / service name
+      PROJECT_ID: "data-science-projects-393906"
+      REGION: "asia-southeast1"
+      REPOSITORY: "ps-transcription-images-general"
+      SERVICE_NAME: "ps-transcription-frontend-general"
 
     steps:
       - name: Checkout code
