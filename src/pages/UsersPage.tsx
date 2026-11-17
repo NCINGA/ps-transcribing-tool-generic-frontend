@@ -2,12 +2,11 @@ import { useEffect, useState } from 'react'
 import { createPortal } from 'react-dom'
 import { useNavigate } from 'react-router-dom'
 import { useAuth } from '../contexts/AuthContext'
-import { fetchUsers, createUser, deleteUser, resetPassword } from '../api'
+import { fetchUsers, createUser, resetUserRole } from '../api'
 import type { UserRecord, UserGroup } from '../types'
 import Modal from '../components/Modal'
-import CredentialsModal from '../components/CredentialsModal'
 import PageHeader from '../components/PageHeader'
-import { UserPlus, KeyRound, UserMinus, Loader2, ShieldAlert, UsersRound, Mail } from 'lucide-react'
+import { UserPlus, UserMinus, Loader2, ShieldAlert, UsersRound, Mail } from 'lucide-react'
 
 function availableGroups(isSuperAdmin: boolean): UserGroup[] {
   return isSuperAdmin ? ['user', 'admin', 'superadmin'] : ['user']
@@ -31,14 +30,14 @@ function avatarColor(seed: string): string {
   return AVATAR_COLORS[h % AVATAR_COLORS.length]
 }
 
-const EMPTY_USER_FORM = { email: '', first_name: '', last_name: '', group: 'user' as UserGroup, department: '' }
+const EMPTY_USER_FORM = { email: '', password: '', first_name: '', last_name: '', group: 'user' as UserGroup, department: '' }
 
 const DEPARTMENTS = ['Cyber Security', 'Multi-Cloud', 'Data and AI', 'Networking', 'Application Services']
 
 const EMAIL_REGEX = /^[^\s@]+@[a-zA-Z0-9-]+(\.[a-zA-Z0-9-]+)*\.[a-zA-Z]{2,}$/
 const NAME_REGEX = /^[A-Za-z\s]+$/
 
-function validateUserForm(form: { email: string; first_name: string; last_name: string; department: string }): string | null {
+function validateUserForm(form: typeof EMPTY_USER_FORM): string | null {
   const email = form.email.trim()
   const firstName = form.first_name.trim()
   const lastName = form.last_name.trim()
@@ -48,26 +47,15 @@ function validateUserForm(form: { email: string; first_name: string; last_name: 
   if (!lastName) return 'Last name is required in order to create the user'
   if (!form.department) return 'Department is required in order to create the user'
   if (!EMAIL_REGEX.test(email)) return 'Please enter a valid email address'
+  if (form.password && form.password.length < 6) return 'Use a password with at least six characters'
   if (!NAME_REGEX.test(firstName)) return 'First name must only contain letters'
   if (!NAME_REGEX.test(lastName)) return 'Last name must only contain letters'
   return null
 }
 
 export default function UsersPage() {
-  const { isAdmin, isSuperAdmin, user, logout } = useAuth()
+  const { isAdmin, isSuperAdmin, user } = useAuth()
   const navigate = useNavigate()
-
-  const canDeleteUser = (target: UserRecord): boolean => {
-    if (target.user_id === user?.uid) return false
-    if (isSuperAdmin) return true
-    return target.group === 'user'
-  }
-
-  const canResetPassword = (target: UserRecord): boolean => {
-    if (isSuperAdmin) return true
-    if (target.user_id === user?.uid) return true
-    return target.group === 'user'
-  }
 
   const [users, setUsers] = useState<UserRecord[]>([])
   const [loading, setLoading] = useState(true)
@@ -78,11 +66,7 @@ export default function UsersPage() {
   const [createError, setCreateError] = useState<string | null>(null)
   const [form, setForm] = useState(EMPTY_USER_FORM)
 
-  const [createdCredentials, setCreatedCredentials] = useState<{ email: string; temporary_password: string } | null>(null)
-  const [resetCredentials, setResetCredentials] = useState<{ email: string; temporary_password: string; isSelf: boolean } | null>(null)
-  const [confirmDelete, setConfirmDelete] = useState<{ id: string; label: string } | null>(null)
-  const [confirmReset, setConfirmReset] = useState<UserRecord | null>(null)
-  const [deleting, setDeleting] = useState<string | null>(null)
+  const [confirmReset, setConfirmReset] = useState<{ id: string; label: string } | null>(null)
   const [resetting, setResetting] = useState<string | null>(null)
   const [alertMsg, setAlertMsg] = useState<string | null>(null)
 
@@ -139,18 +123,18 @@ export default function UsersPage() {
     setCreating(true)
     setCreateError(null)
     try {
-      const result = await createUser({
+      await createUser({
         ...form,
         email: form.email.trim(),
+        password: form.password || undefined,
         first_name: form.first_name.trim(),
         last_name: form.last_name.trim(),
       })
       setShowCreate(false)
       setForm(EMPTY_USER_FORM)
-      setCreatedCredentials({ email: result.email, temporary_password: result.temporary_password })
       await load()
     } catch (e: unknown) {
-      setCreateError(e instanceof Error ? e.message : 'Failed to create user')
+      setCreateError(e instanceof Error ? e.message : 'Failed to save user settings')
     } finally {
       setCreating(false)
     }
@@ -162,36 +146,16 @@ export default function UsersPage() {
     setCreateError(null)
   }
 
-  const handleDeleteClick = (u: UserRecord) => {
-    setConfirmDelete({ id: u.user_id, label: u.email || u.user_id })
-  }
-
-  const confirmDeleteUser = async () => {
-    if (!confirmDelete) return
-    const { id } = confirmDelete
-    setConfirmDelete(null)
-    setDeleting(id)
+  const confirmRoleReset = async () => {
+    if (!confirmReset) return
+    const { id } = confirmReset
+    setConfirmReset(null)
+    setResetting(id)
     try {
-      await deleteUser(id)
+      await resetUserRole(id)
       await load()
     } catch (e: unknown) {
-      setAlertMsg(e instanceof Error ? e.message : 'Failed to delete user')
-    } finally {
-      setDeleting(null)
-    }
-  }
-
-  const handleResetPassword = async (u: UserRecord) => {
-    setResetting(u.user_id)
-    try {
-      const result = await resetPassword(u.user_id)
-      setResetCredentials({
-        email: u.email || u.user_id,
-        temporary_password: result.temporary_password,
-        isSelf: u.user_id === user?.uid,
-      })
-    } catch (e: unknown) {
-      setAlertMsg(e instanceof Error ? e.message : 'Failed to reset password')
+      setAlertMsg(e instanceof Error ? e.message : 'Failed to reset user role')
     } finally {
       setResetting(null)
     }
@@ -201,10 +165,10 @@ export default function UsersPage() {
     <div className="page">
       <PageHeader
         title="Users"
-        subtitle="Manage who can use the transcription tool"
+        subtitle="Manage Firebase password accounts and transcription roles"
         actions={
           <button onClick={() => setShowCreate(true)} className="btn btn-primary">
-            <UserPlus size={16} /> New User
+            <UserPlus size={16} /> Add or update user
           </button>
         }
       />
@@ -242,18 +206,13 @@ export default function UsersPage() {
                   {u.department && <span className="pill">{u.department}</span>}
                 </div>
                 <div className="user-actions">
-                  {canResetPassword(u) && (
-                    <button onClick={() => setConfirmReset(u)} disabled={resetting === u.user_id} className="btn btn-secondary btn-sm" style={{ flex: 1 }}>
-                      {resetting === u.user_id ? <Loader2 size={13} className="spin" /> : <KeyRound size={13} />} Reset Password
-                    </button>
-                  )}
-                  {canDeleteUser(u) && (
+                  {isSuperAdmin && u.user_id !== user?.uid && (u.group === 'admin' || u.group === 'superadmin') && (
                     <button
-                      onClick={() => handleDeleteClick(u)}
-                      disabled={deleting === u.user_id}
+                      onClick={() => setConfirmReset({ id: u.user_id, label: u.email || u.user_id })}
+                      disabled={resetting === u.user_id}
                       className="btn btn-outline-danger btn-sm"
                     >
-                      {deleting === u.user_id ? <Loader2 size={13} className="spin" /> : <UserMinus size={13} />} Remove
+                      {resetting === u.user_id ? <Loader2 size={13} className="spin" /> : <UserMinus size={13} />} Reset role
                     </button>
                   )}
                 </div>
@@ -267,10 +226,15 @@ export default function UsersPage() {
         <div className="modal-backdrop">
           <div className="modal" style={{ maxWidth: '480px' }} role="dialog" aria-modal="true">
             <div className="modal-icon"><UserPlus size={22} /></div>
-            <div className="modal-title" style={{ marginBottom: '18px' }}>New User</div>
+            <div className="modal-title" style={{ marginBottom: '18px' }}>Add or update user</div>
+            <p>Enter a password to create a Firebase account. Leave it blank to update an existing account’s transcription settings.</p>
 
             <FormField label="Email" required>
               <input type="email" value={form.email} onChange={e => setForm({ ...form, email: e.target.value })} className="input" />
+            </FormField>
+            <FormField label="Password for new accounts">
+              <input type="password" autoComplete="new-password" value={form.password}
+                onChange={e => setForm({ ...form, password: e.target.value })} className="input" />
             </FormField>
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
               <FormField label="First name" required>
@@ -299,7 +263,7 @@ export default function UsersPage() {
             <div className="modal-actions" style={{ marginTop: '22px' }}>
               <button onClick={handleCancelCreate} className="btn btn-secondary">Cancel</button>
               <button onClick={handleCreate} disabled={creating} className="btn btn-primary">
-                {creating ? 'Creating...' : 'Create'}
+                {creating ? 'Saving…' : 'Save user'}
               </button>
             </div>
           </div>
@@ -307,57 +271,14 @@ export default function UsersPage() {
         document.body,
       )}
 
-      {createdCredentials && (
-        <CredentialsModal
-          title="User Created"
-          email={createdCredentials.email}
-          temporaryPassword={createdCredentials.temporary_password}
-          onClose={() => setCreatedCredentials(null)}
-        />
-      )}
-
-      {resetCredentials && (
-        <CredentialsModal
-          title="Password Reset"
-          email={resetCredentials.email}
-          temporaryPassword={resetCredentials.temporary_password}
-          extraWarning={resetCredentials.isSelf ? 'You will be logged out immediately when this modal closes.' : undefined}
-          onClose={() => {
-            const wasSelf = resetCredentials.isSelf
-            setResetCredentials(null)
-            if (wasSelf) logout()
-          }}
-        />
-      )}
-
-      {confirmDelete && (
-        <Modal
-          title="Remove user"
-          message={`Remove "${confirmDelete.label}"? This cannot be undone.`}
-          confirmLabel="Remove"
-          cancelLabel="Cancel"
-          danger
-          onConfirm={confirmDeleteUser}
-          onCancel={() => setConfirmDelete(null)}
-        />
-      )}
-
       {confirmReset && (
         <Modal
-          title="Reset password"
-          message={
-            confirmReset.user_id === user?.uid
-              ? 'Reset your own password? You will be issued a new temporary password and logged out immediately.'
-              : `Reset the password for "${confirmReset.email || confirmReset.user_id}"? They will be issued a new temporary password immediately.`
-          }
-          confirmLabel="Reset"
+          title="Reset user role"
+          message={`Change ${confirmReset.label} to Standard User? They can still sign in and use the transcription tool.`}
+          confirmLabel="Reset role"
           cancelLabel="Cancel"
           danger
-          onConfirm={() => {
-            const target = confirmReset
-            setConfirmReset(null)
-            handleResetPassword(target)
-          }}
+          onConfirm={confirmRoleReset}
           onCancel={() => setConfirmReset(null)}
         />
       )}

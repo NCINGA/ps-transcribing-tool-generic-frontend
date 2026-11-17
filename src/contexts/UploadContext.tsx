@@ -1,5 +1,6 @@
 import { createContext, useContext, useState, type ReactNode } from 'react'
 import { uploadFile as apiUploadFile } from '../api'
+import type { TranscriptLanguage } from '../types'
 
 interface ActiveUpload {
   filename: string
@@ -8,7 +9,7 @@ interface ActiveUpload {
 interface UploadContextValue {
   activeUpload: ActiveUpload | null
   uploadVersion: number
-  startUpload: (file: File) => Promise<void>
+  startUpload: (file: File, language: TranscriptLanguage) => ReturnType<typeof apiUploadFile>
 }
 
 const UploadContext = createContext<UploadContextValue | undefined>(undefined)
@@ -17,11 +18,12 @@ export function UploadProvider({ children }: { children: ReactNode }) {
   const [activeUpload, setActiveUpload] = useState<ActiveUpload | null>(null)
   const [uploadVersion, setUploadVersion] = useState(0)
 
-  const startUpload = async (file: File): Promise<void> => {
+  const startUpload = async (file: File, language: TranscriptLanguage) => {
     setActiveUpload({ filename: file.name })
     try {
-      await apiUploadFile(file)
+      const result = await apiUploadFile(file, language)
       setUploadVersion(v => v + 1)
+      return result
     } finally {
       setActiveUpload(null)
     }

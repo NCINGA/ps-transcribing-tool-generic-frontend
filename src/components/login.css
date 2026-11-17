@@ -1,0 +1,72 @@
+.login-page {
+  display: grid;
+  place-items: center;
+  width: 100%;
+  min-height: 100vh;
+  min-height: 100svh;
+  padding: clamp(16px, 5vw, 56px);
+}
+
+.login-shell {
+  display: grid;
+  grid-template-columns: minmax(0, 0.85fr) minmax(0, 1fr);
+  width: min(100%, 880px);
+  overflow: hidden;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  background: var(--bg-surface);
+  box-shadow: var(--shadow-lg);
+}
+
+.login-brand {
+  display: grid;
+  grid-template-rows: auto 1fr;
+  min-height: 460px;
+  padding: clamp(24px, 4vw, 40px);
+  background:
+    radial-gradient(ellipse at 15% 82%, rgba(79, 70, 229, 0.32), transparent 72%),
+    radial-gradient(ellipse at 95% 35%, rgba(6, 182, 212, 0.13), transparent 60%),
+    var(--navbar-bg);
+}
+
+.login-brand-lockup { display: flex; align-items: center; gap: 12px; }
+.login-brand-name { color: #fff; font-size: 17px; font-weight: 750; line-height: 1.3; }
+.login-brand-tagline { color: var(--navbar-text-muted); font-size: 12px; }
+
+.login-waveform {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: clamp(4px, 0.8vw, 8px);
+  align-self: center;
+  padding-bottom: 18px;
+}
+
+.login-waveform span {
+  flex: 0 1 5px;
+  min-width: 3px;
+  border-radius: 8px;
+  background: linear-gradient(180deg, #a5b4fc, #6366f1 64%, #22d3ee);
+  opacity: 0.85;
+}
+
+.login-panel { display: grid; align-items: center; padding: clamp(24px, 6vw, 64px); }
+.login-panel-inner { width: 100%; }
+.login-panel h1 { font-size: clamp(30px, 5vw, 42px); line-height: 1.15; }
+.login-description { margin: 9px 0 24px; color: var(--text-muted); overflow-wrap: anywhere; }
+.login-form { display: grid; gap: 16px; }
+.login-form .field-label { font-size: 13px; }
+.login-form .input { min-height: 44px; font-size: 16px; }
+.login-password { position: relative; }
+.login-password .input { padding-right: 50px; }
+.login-password .btn { position: absolute; inset: 4px 5px 4px auto; width: 36px; padding: 0; }
+.login-submit { min-height: 44px; width: 100%; margin-top: 4px; font-size: 14px; }
+
+@media (max-width: 650px) {
+  .login-shell { grid-template-columns: minmax(0, 1fr); max-width: 440px; }
+  .login-brand { min-height: auto; padding: 22px 24px; }
+  .login-waveform { display: none; }
+  .login-panel { padding: 30px 24px; }
+}
+
+.login-checking { display: flex; align-items: center; gap: 8px; color: var(--text-muted); }

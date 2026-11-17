@@ -1,6 +1,6 @@
 import { createContext, useContext, useEffect, useState, type ReactNode } from 'react'
-import { GoogleAuthProvider, onIdTokenChanged, signInWithPopup, signOut } from 'firebase/auth'
-import { firebaseAuth } from '../lib/firebase'
+import { onIdTokenChanged, signInWithEmailAndPassword, signOut } from 'firebase/auth'
+import { firebaseAuth, isPreview } from '../lib/firebase'
 
 export interface AuthUser {
   uid: string
@@ -15,14 +15,22 @@ interface AuthContextValue {
   loading: boolean
   isAdmin: boolean
   isSuperAdmin: boolean
-  login: () => Promise<void>
+  login: (email: string, password: string) => Promise<void>
   logout: () => Promise<void>
 }
 
 const AuthContext = createContext<AuthContextValue | undefined>(undefined)
+const previewUser: AuthUser = {
+  uid: 'preview',
+  username: 'Preview',
+  email: null,
+  name: null,
+  roles: new Set(),
+}
 
-async function login() {
-  if (firebaseAuth) await signInWithPopup(firebaseAuth, new GoogleAuthProvider())
+async function login(email: string, password: string) {
+  if (!firebaseAuth) throw new Error('Sign-in is unavailable.')
+  await signInWithEmailAndPassword(firebaseAuth, email, password)
 }
 
 async function logout() {
@@ -30,7 +38,7 @@ async function logout() {
 }
 
 export function AuthProvider({ children }: { children: ReactNode }) {
-  const [user, setUser] = useState<AuthUser | null>(null)
+  const [user, setUser] = useState<AuthUser | null>(isPreview ? previewUser : null)
   const [loading, setLoading] = useState(firebaseAuth !== null)
 
   useEffect(() => {
@@ -45,17 +53,21 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         return
       }
       try {
-        const { claims } = await identity.getIdTokenResult()
+        const { claims, signInProvider } = await identity.getIdTokenResult()
         if (!active || auth.currentUser !== identity) return
-        const roles = Array.isArray(claims.roles)
-          ? claims.roles.filter((role): role is string => typeof role === 'string')
-          : []
+        if (signInProvider !== 'password') {
+          setUser(null)
+          setLoading(false)
+          return
+        }
+        const access = claims.ps_transcription as { group?: unknown } | undefined
+        const group = access?.group === 'admin' || access?.group === 'superadmin' ? access.group : 'user'
         setUser({
           uid: identity.uid,
           username: identity.email ?? identity.uid,
           email: identity.email,
           name: identity.displayName,
-          roles: new Set(roles),
+          roles: new Set([`role-${group}`]),
         })
       } catch {
         if (!active || auth.currentUser !== identity) return

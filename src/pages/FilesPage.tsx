@@ -68,7 +68,7 @@ function LanguageTile({
         {state === 'completed' && <CheckCircle2 size={16} className="lang-tile-check" />}
       </div>
       <div className="lang-tile-hint">
-        {state === 'processing' ? (status === 'pending' ? 'Uploading…' : 'Transcribing…')
+        {state === 'processing' ? (status === 'pending' ? 'Queued…' : 'Transcribing…')
           : state === 'failed' ? 'Something went wrong'
           : state === 'completed' ? 'Ready to read'
           : LANG_HINT[language]}
@@ -111,6 +111,7 @@ export default function FilesPage() {
   const [error, setError] = useState<string | null>(null)
   const [triggering, setTriggering] = useState<Set<string>>(new Set())
   const [busy, setBusy] = useState(false)
+  const [uploadLanguage, setUploadLanguage] = useState<TranscriptLanguage>('raw')
   const [uploadError, setUploadError] = useState<string | null>(null)
   const fileInputRef = useRef<HTMLInputElement>(null)
   const [deleting, setDeleting] = useState<string | null>(null)
@@ -193,9 +194,9 @@ export default function FilesPage() {
 
     setUploadError(null)
     try {
-      await startUpload(file)
+      const { file_id, job_id } = await startUpload(file, uploadLanguage)
+      watchJob(file_id, uploadLanguage, job_id)
       await load()
-      setTimeout(load, 4000)
     } catch (err: unknown) {
       showUploadError(err instanceof Error ? err.message : 'Upload failed')
     }
@@ -262,6 +263,11 @@ export default function FilesPage() {
             <button onClick={load} disabled={busy} className="btn btn-secondary">
               <RefreshCw size={15} className={busy ? 'spin' : ''} /> {busy ? 'Working...' : 'Refresh'}
             </button>
+            <select aria-label="Transcription language" className="input"
+              value={uploadLanguage} onChange={event => setUploadLanguage(event.target.value as TranscriptLanguage)}
+              disabled={isPreview || !!activeUpload}>
+              {LANGUAGES.map(language => <option key={language} value={language}>{LANG_LABEL[language]}</option>)}
+            </select>
             <button onClick={handleUploadClick} disabled={isPreview || !!activeUpload} className="btn btn-primary">
               {activeUpload ? <Loader2 size={16} className="spin" /> : <UploadCloud size={16} />}
               {activeUpload ? 'Uploading...' : 'Upload'}

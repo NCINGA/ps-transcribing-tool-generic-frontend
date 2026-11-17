@@ -87,7 +87,7 @@ async function reportUploadFailed(fileId: string): Promise<void> {
   }
 }
 
-export async function uploadFile(file: File): Promise<{ file_id: string }> {
+export async function uploadFile(file: File, language: TranscriptLanguage): Promise<{ file_id: string; job_id: string }> {
   const urlRes = await fetch(`${BASE}/v1/files/upload-url`, {
     method: 'POST',
     headers: await authHeaders({ 'Content-Type': 'application/json' }),
@@ -95,6 +95,7 @@ export async function uploadFile(file: File): Promise<{ file_id: string }> {
       filename: file.name,
       content_type: file.type || 'application/octet-stream',
       size: file.size,
+      language,
     }),
   })
   const { file_id, upload_url } = await handle<{ file_id: string; upload_url: string }>(urlRes)
@@ -117,9 +118,7 @@ export async function uploadFile(file: File): Promise<{ file_id: string }> {
     method: 'POST',
     headers: await authHeaders(),
   })
-  await handle(confirmRes)
-
-  return { file_id }
+  return handle(confirmRes)
 }
 
 export async function deleteFile(fileId: string): Promise<void> {
@@ -235,11 +234,12 @@ export async function fetchUsers(): Promise<UserRecord[]> {
 
 export async function createUser(input: {
   email: string
+  password?: string
   first_name: string
   last_name: string
   group: UserGroup
   department: string
-}): Promise<{ user_id: string; email: string; group: string; temporary_password: string }> {
+}): Promise<{ user_id: string; email: string; group: string }> {
   const res = await fetch(`${BASE}/v1/users`, {
     method: 'POST',
     headers: await authHeaders({ 'Content-Type': 'application/json' }),
@@ -248,7 +248,7 @@ export async function createUser(input: {
   return handle(res)
 }
 
-export async function deleteUser(userId: string): Promise<void> {
+export async function resetUserRole(userId: string): Promise<void> {
   const res = await fetch(`${BASE}/v1/users/${userId}`, {
     method: 'DELETE',
     headers: await authHeaders(),
@@ -265,14 +265,6 @@ export async function fetchUsage(days = 30): Promise<UsageStats> {
 export async function fetchLaptopUsage(days = 30): Promise<UsageStats> {
   if (isPreview) return previewUsage(days)
   const res = await fetch(`${BASE}/v1/jobs/usage/laptop?days=${days}`, { headers: await authHeaders() })
-  return handle(res)
-}
-
-export async function resetPassword(userId: string): Promise<{ user_id: string; temporary_password: string }> {
-  const res = await fetch(`${BASE}/v1/users/${userId}/reset-password`, {
-    method: 'POST',
-    headers: await authHeaders(),
-  })
   return handle(res)
 }
 
