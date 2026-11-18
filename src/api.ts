@@ -1,4 +1,4 @@
-import type { ActionItem, FileRecord, Job, TranscriptLanguage, UserRecord, UserGroup, UsageStats, MonthlyUsageGauge, OrgUsageByLaptop } from './types'
+import type { ActionItem, FileRecord, Job, TranscriptLanguage, UserRecord, UserGroup, UsageStats, MonthlyUsageGauge, OrgUsageByLaptop, OrgUsageByDepartment } from './types'
 import { apiBaseUrl as BASE, firebaseAuth, isPreview } from './lib/firebase'
 import { previewFile, previewJob, previewUsage } from './preview'
 
@@ -277,5 +277,11 @@ export async function fetchOrgUsage(): Promise<MonthlyUsageGauge> {
 export async function fetchOrgUsageByLaptop(): Promise<OrgUsageByLaptop> {
   if (isPreview) return { laptops: [{ laptop_id: 'sample', label: 'Sample workstation', hours: 480 / 3600 }] }
   const res = await fetch(`${BASE}/v1/jobs/org-usage/by-laptop`, { headers: await authHeaders() })
+  return handle(res)
+}
+
+export async function fetchOrgUsageByDepartment(): Promise<OrgUsageByDepartment> {
+  if (isPreview) return { departments: [{ department: 'Unassigned', label: 'Unassigned', hours: 480 / 3600 }] }
+  const res = await fetch(`${BASE}/v1/jobs/org-usage/by-department`, { headers: await authHeaders() })
   return handle(res)
 }

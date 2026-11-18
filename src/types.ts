@@ -111,3 +111,7 @@ export interface LaptopUsageEntry {
 export interface OrgUsageByLaptop {
   laptops: LaptopUsageEntry[];
 }
+
+export interface OrgUsageByDepartment {
+  departments: { department: string; label: string; hours: number }[];
+}

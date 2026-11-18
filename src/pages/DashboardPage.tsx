@@ -1,8 +1,8 @@
 import { useEffect, useState } from 'react'
 import { PieChart as PieIcon, Languages, Building2, User, Users, ListChecks } from 'lucide-react'
 import StatusPill, { LangChip } from '../components/StatusPill'
-import { fetchAllJobs, fetchJobStats, fetchUsage, fetchLaptopUsage, fetchOrgUsage, fetchOrgUsageByLaptop } from '../api'
-import type { Job, UsageStats, MonthlyUsageGauge, OrgUsageByLaptop } from '../types'
+import { fetchAllJobs, fetchJobStats, fetchUsage, fetchLaptopUsage, fetchOrgUsage, fetchOrgUsageByDepartment } from '../api'
+import type { Job, UsageStats, MonthlyUsageGauge, OrgUsageByDepartment } from '../types'
 import GaugeCard from '../components/GaugeCard'
 import Pagination from '../components/Pagination'
 import PieChartCard from '../components/PieChartCard'
@@ -22,9 +22,9 @@ export default function DashboardPage() {
   const [usage, setUsage] = useState<UsageStats | null>(null)
   const [laptopUsage, setLaptopUsage] = useState<UsageStats | null>(null)
   const [orgUsage, setOrgUsage] = useState<MonthlyUsageGauge | null>(null)
-  const [orgUsageByLaptop, setOrgUsageByLaptop] = useState<OrgUsageByLaptop | null>(null)
+  const [orgUsageByDepartment, setOrgUsageByDepartment] = useState<OrgUsageByDepartment | null>(null)
   const [orgUsageError, setOrgUsageError] = useState<string>()
-  const [orgUsageByLaptopError, setOrgUsageByLaptopError] = useState<string>()
+  const [orgUsageByDepartmentError, setOrgUsageByDepartmentError] = useState<string>()
   const PAGE_SIZE = 10
 
   useEffect(() => {
@@ -54,9 +54,9 @@ export default function DashboardPage() {
     fetchOrgUsage()
       .then(setOrgUsage)
       .catch(() => setOrgUsageError('Usage unavailable. Refresh to try again.'))
-    fetchOrgUsageByLaptop()
-      .then(setOrgUsageByLaptop)
-      .catch(() => setOrgUsageByLaptopError('Usage unavailable. Refresh to try again.'))
+    fetchOrgUsageByDepartment()
+      .then(setOrgUsageByDepartment)
+      .catch(() => setOrgUsageByDepartmentError('Usage unavailable. Refresh to try again.'))
   }, [])
 
   if (loading) return (
@@ -102,12 +102,12 @@ export default function DashboardPage() {
       <div className="grid grid-2 mb-28">
         <GaugeCard data={orgUsage} error={orgUsageError} />
         <PieChartCard
-          title="Monthly Usage by Workstation"
-          error={orgUsageByLaptopError}
+          title="Monthly Usage by Department"
+          error={orgUsageByDepartmentError}
           icon={<Building2 size={17} />}
-          segments={orgUsageByLaptop ? orgUsageByLaptop.laptops.map((l, i) => ({
-            label: l.label,
-            value: l.hours,
+          segments={orgUsageByDepartment ? orgUsageByDepartment.departments.map((department, i) => ({
+            label: department.label,
+            value: department.hours,
             color: ['#6366f1', '#06b6d4', '#a855f7', '#10b981', '#f59e0b', '#94a3b8'][i % 6],
           })) : null}
         />
