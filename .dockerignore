@@ -5,6 +5,7 @@ dist-ssr
 .git
 .gitignore
 .github
+gha-creds-*.json
 
 .env
 .env.local

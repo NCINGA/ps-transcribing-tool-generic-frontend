@@ -1,15 +1,20 @@
-name: Build and Push frontend image (dev)
+name: Build and Deploy frontend (dev)
 
-# TODO (GCP owner): the automatic trigger is switched off so nothing runs until
-# the values below are filled in. To build on every push to main, replace
-# `workflow_dispatch:` with:
-#   push:
-#     branches: [ main ]
 on:
+  push:
+    branches: [main]
   workflow_dispatch:
 
+permissions:
+  contents: read
+
+concurrency:
+  group: deploy-frontend-dev
+  cancel-in-progress: false
+
 jobs:
-  build-and-push:
+  build-and-deploy:
+    if: github.ref == 'refs/heads/main'
     runs-on: ubuntu-latest
 
     env:
@@ -25,8 +30,6 @@ jobs:
       - name: Google Auth
         uses: google-github-actions/auth@v2
         with:
-          # TODO: create this secret in the new GitHub repo (service-account key),
-          # or switch to Workload Identity Federation.
           credentials_json: ${{ secrets.GOOGLE_APPLICATION_CREDENTIALS }}
 
       - name: Set up Cloud SDK
@@ -35,10 +38,37 @@ jobs:
           project_id: ${{ env.PROJECT_ID }}
 
       - name: Authorize Docker push
-        run: gcloud auth configure-docker ${{ env.REGION }}-docker.pkg.dev
+        run: gcloud auth configure-docker "${REGION}-docker.pkg.dev" --quiet
 
       - name: Build and push Docker image
+        id: image
+        shell: bash
         run: |
-          IMAGE=${{ env.REGION }}-docker.pkg.dev/${{ env.PROJECT_ID }}/${{ env.REPOSITORY }}/${{ env.SERVICE_NAME }}
-          docker build -t $IMAGE:latest .
-          docker push $IMAGE:latest
+          set -euo pipefail
+          IMAGE="${REGION}-docker.pkg.dev/${PROJECT_ID}/${REPOSITORY}/${SERVICE_NAME}"
+          docker build --platform linux/amd64 -t "$IMAGE:$GITHUB_SHA" -t "$IMAGE:latest" .
+          docker push "$IMAGE:$GITHUB_SHA"
+          docker push "$IMAGE:latest"
+          DIGEST=$(docker inspect --format='{{index .RepoDigests 0}}' "$IMAGE:$GITHUB_SHA")
+          echo "image=$DIGEST" >> "$GITHUB_OUTPUT"
+
+      - name: Deploy to Cloud Run
+        shell: bash
+        env:
+          DEPLOY_IMAGE: ${{ steps.image.outputs.image }}
+        run: |
+          set -euo pipefail
+          SUFFIX="ci-${GITHUB_SHA:0:7}-${GITHUB_RUN_NUMBER}-${GITHUB_RUN_ATTEMPT}"
+          REVISION="${SERVICE_NAME}-$SUFFIX"
+          gcloud run services update "$SERVICE_NAME" \
+            --project "$PROJECT_ID" \
+            --region "$REGION" \
+            --image "$DEPLOY_IMAGE" \
+            --revision-suffix "$SUFFIX" \
+            --no-traffic \
+            --quiet
+          gcloud run services update-traffic "$SERVICE_NAME" \
+            --project "$PROJECT_ID" \
+            --region "$REGION" \
+            --to-revisions "$REVISION=100" \
+            --quiet
