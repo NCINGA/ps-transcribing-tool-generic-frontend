@@ -13,9 +13,10 @@ interface PieChartCardProps {
   icon?: ReactNode
   /** digits after the decimal point for values (0 for counts, 1 for hours) */
   decimals?: number
+  error?: string
 }
 
-export default function PieChartCard({ title, segments, icon, decimals = 1 }: PieChartCardProps) {
+export default function PieChartCard({ title, segments, icon, decimals = 1, error }: PieChartCardProps) {
   const [activeIndex, setActiveIndex] = useState<number | null>(null)
   const total = segments?.reduce((sum, s) => sum + s.value, 0) ?? 0
 
@@ -26,7 +27,9 @@ export default function PieChartCard({ title, segments, icon, decimals = 1 }: Pi
         <div className="card-title">{title}</div>
       </div>
 
-      {segments === null ? (
+      {error ? (
+        <div className="alert danger" role="alert">{error}</div>
+      ) : segments === null ? (
         <div style={{ display: 'flex', alignItems: 'center', gap: '24px' }}>
           <div style={{
             width: '160px', height: '160px', borderRadius: '50%', flexShrink: 0,

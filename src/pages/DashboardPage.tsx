@@ -23,6 +23,8 @@ export default function DashboardPage() {
   const [laptopUsage, setLaptopUsage] = useState<UsageStats | null>(null)
   const [orgUsage, setOrgUsage] = useState<MonthlyUsageGauge | null>(null)
   const [orgUsageByLaptop, setOrgUsageByLaptop] = useState<OrgUsageByLaptop | null>(null)
+  const [orgUsageError, setOrgUsageError] = useState<string>()
+  const [orgUsageByLaptopError, setOrgUsageByLaptopError] = useState<string>()
   const PAGE_SIZE = 10
 
   useEffect(() => {
@@ -49,14 +51,12 @@ export default function DashboardPage() {
   }, [days])
 
   useEffect(() => {
-    Promise.all([fetchOrgUsage(), fetchOrgUsageByLaptop()])
-      .then(([gauge, byLaptop]) => {
-        setOrgUsage(gauge)
-        setOrgUsageByLaptop(byLaptop)
-      })
-      .catch(() => {
-        // best-effort -- org-wide widgets are supplementary, don't block the rest of the dashboard
-      })
+    fetchOrgUsage()
+      .then(setOrgUsage)
+      .catch(() => setOrgUsageError('Usage unavailable. Refresh to try again.'))
+    fetchOrgUsageByLaptop()
+      .then(setOrgUsageByLaptop)
+      .catch(() => setOrgUsageByLaptopError('Usage unavailable. Refresh to try again.'))
   }, [])
 
   if (loading) return (
@@ -100,9 +100,10 @@ export default function DashboardPage() {
       </div>
 
       <div className="grid grid-2 mb-28">
-        <GaugeCard data={orgUsage} />
+        <GaugeCard data={orgUsage} error={orgUsageError} />
         <PieChartCard
           title="Monthly Usage by Workstation"
+          error={orgUsageByLaptopError}
           icon={<Building2 size={17} />}
           segments={orgUsageByLaptop ? orgUsageByLaptop.laptops.map((l, i) => ({
             label: l.label,

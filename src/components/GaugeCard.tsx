@@ -2,7 +2,7 @@ import { RadialBarChart, RadialBar, PolarAngleAxis, ResponsiveContainer } from '
 import { Gauge } from 'lucide-react'
 import type { MonthlyUsageGauge } from '../types'
 
-export default function GaugeCard({ data }: { data: MonthlyUsageGauge | null }) {
+export default function GaugeCard({ data, error }: { data: MonthlyUsageGauge | null; error?: string }) {
   return (
     <div className="card card-pad">
       <div className="card-head" style={{ marginBottom: '8px' }}>
@@ -10,7 +10,9 @@ export default function GaugeCard({ data }: { data: MonthlyUsageGauge | null }) 
         <div className="card-title">Monthly Usage (All Workstations)</div>
       </div>
 
-      {data === null ? (
+      {error ? (
+        <div className="alert danger" role="alert">{error}</div>
+      ) : data === null ? (
         <div style={{ height: '180px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
           <div style={{
             width: '130px', height: '130px', borderRadius: '50%',
