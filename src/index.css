@@ -99,6 +99,15 @@ h1, h2, h3 { letter-spacing: -0.015em; }
 .mb-20 { margin-bottom: 20px; }
 .mb-28 { margin-bottom: 28px; }
 
+.files-toolbar { display: flex; align-items: center; gap: 12px; margin-bottom: 24px; }
+.files-search { position: relative; flex: 1; min-width: 0; }
+.files-search > svg {
+  position: absolute; left: 12px; top: 50%; transform: translateY(-50%);
+  color: var(--text-muted); pointer-events: none;
+}
+.files-search .input { padding-left: 38px; }
+.files-toolbar > .btn { flex-shrink: 0; }
+
 .transcript-grid {
   display: grid;
   grid-template-columns: minmax(0, 1fr) 390px;

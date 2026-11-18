@@ -1,6 +1,6 @@
 import {useEffect, useRef, useState} from 'react'
 import { useNavigate } from 'react-router-dom'
-import { Loader2, UploadCloud, RefreshCw, Trash2, FileAudio, FileVideo, Sparkles, Eye, RotateCcw, FolderOpen, Clock, HardDrive, CalendarDays, CheckCircle2 } from 'lucide-react'
+import { Loader2, UploadCloud, Search, Trash2, FileAudio, FileVideo, Sparkles, Eye, RotateCcw, FolderOpen, Clock, HardDrive, CalendarDays, CheckCircle2 } from 'lucide-react'
 import { fetchFiles, triggerJob, deleteFile } from '../api'
 import { useConnectivity } from '../contexts/ConnectivityContext'
 import { useUpload } from '../contexts/UploadContext'
@@ -110,8 +110,7 @@ export default function FilesPage() {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [triggering, setTriggering] = useState<Set<string>>(new Set())
-  const [busy, setBusy] = useState(false)
-  const [uploadLanguage, setUploadLanguage] = useState<TranscriptLanguage>('raw')
+  const [search, setSearch] = useState('')
   const [uploadError, setUploadError] = useState<string | null>(null)
   const fileInputRef = useRef<HTMLInputElement>(null)
   const [deleting, setDeleting] = useState<string | null>(null)
@@ -126,23 +125,13 @@ export default function FilesPage() {
     setTimeout(() => setUploadError(null), 10000)
   }
 
-  // Every load() call is allowed to actually run -- it used to bail out
-  // immediately via `if (busy) return` whenever another call was already in
-  // flight, which was fine back when the only callers were a user click or
-  // the one-time mount effect, but silently drops a call now that the job
-  // tracker also calls load() on its own after a job resolves, with nothing
-  // else to retry it. Each call gets a ticket instead; only the most
-  // recently issued one is allowed to apply its result, so an older,
-  // slower response can never overwrite a newer one, and nothing important
-  // is ever thrown away unactioned. `busy` itself is kept only for the
-  // Refresh button's disabled/"Working..." display.
+  // Ignore responses superseded by a newer page or search request.
   const requestSeqRef = useRef(0)
 
   const load = async () => {
     const seq = ++requestSeqRef.current
-    setBusy(true)
     try {
-      const data = await fetchFiles(page, PAGE_SIZE)
+      const data = await fetchFiles(page, PAGE_SIZE, search)
       if (seq !== requestSeqRef.current) return // superseded by a newer request
       setFiles(data.files)
       setTotal(data.total)
@@ -152,15 +141,14 @@ export default function FilesPage() {
       if (seq !== requestSeqRef.current) return
       setError(e instanceof Error ? e.message : 'Failed to load files')
     } finally {
-      setLoading(false)
-      if (seq === requestSeqRef.current) setBusy(false)
+      if (seq === requestSeqRef.current) setLoading(false)
     }
   }
 
   useEffect(() => {
     load()
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [page, uploadVersion])
+  }, [page, uploadVersion, search])
 
   // Picks up jobs the global tracker just saw resolve (completed or failed)
   // -- refreshes the file list once so statuses/transcripts are current,
@@ -194,8 +182,8 @@ export default function FilesPage() {
 
     setUploadError(null)
     try {
-      const { file_id, job_id } = await startUpload(file, uploadLanguage)
-      watchJob(file_id, uploadLanguage, job_id)
+      const { file_id, job_id } = await startUpload(file, 'raw')
+      watchJob(file_id, 'raw', job_id)
       await load()
     } catch (err: unknown) {
       showUploadError(err instanceof Error ? err.message : 'Upload failed')
@@ -258,23 +246,28 @@ export default function FilesPage() {
       <PageHeader
         title="Session Files"
         subtitle="Max file size: 500MB"
-        actions={
-          <>
-            <button onClick={load} disabled={busy} className="btn btn-secondary">
-              <RefreshCw size={15} className={busy ? 'spin' : ''} /> {busy ? 'Working...' : 'Refresh'}
-            </button>
-            <select aria-label="Transcription language" className="input"
-              value={uploadLanguage} onChange={event => setUploadLanguage(event.target.value as TranscriptLanguage)}
-              disabled={isPreview || !!activeUpload}>
-              {LANGUAGES.map(language => <option key={language} value={language}>{LANG_LABEL[language]}</option>)}
-            </select>
-            <button onClick={handleUploadClick} disabled={isPreview || !!activeUpload} className="btn btn-primary">
-              {activeUpload ? <Loader2 size={16} className="spin" /> : <UploadCloud size={16} />}
-              {activeUpload ? 'Uploading...' : 'Upload'}
-            </button>
-          </>
-        }
       />
+      <div className="files-toolbar">
+        <div className="files-search">
+          <Search size={17} aria-hidden="true" />
+          <input
+            type="search"
+            className="input"
+            aria-label="Search files by name"
+            placeholder="Search files…"
+            value={search}
+            onChange={event => {
+              requestSeqRef.current += 1
+              setSearch(event.target.value)
+              setPage(1)
+            }}
+          />
+        </div>
+        <button onClick={handleUploadClick} disabled={isPreview || !!activeUpload} className="btn btn-primary">
+          {activeUpload ? <Loader2 size={16} className="spin" /> : <UploadCloud size={16} />}
+          {activeUpload ? 'Uploading...' : 'Upload'}
+        </button>
+      </div>
 
       <input
         ref={fileInputRef}
@@ -304,8 +297,8 @@ export default function FilesPage() {
         <div className="card">
           <div className="empty">
             <span className="icon-chip"><FolderOpen size={24} /></span>
-            <h3>No files yet</h3>
-            <p>Upload audio or video files to get started.</p>
+            <h3>{search.trim() ? 'No files found' : 'No files yet'}</h3>
+            <p>{search.trim() ? 'Try a different file name.' : 'Upload audio or video files to get started.'}</p>
           </div>
         </div>
       ) : (

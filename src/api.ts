@@ -32,9 +32,13 @@ async function handle<T>(res: Response): Promise<T> {
   return res.json()
 }
 
-export async function fetchFiles(page = 1, pageSize = 10): Promise<{ files: FileRecord[]; total: number }> {
-  if (isPreview) return { files: page === 1 ? [previewFile] : [], total: 1 }
-  const res = await fetch(`${BASE}/v1/files?page=${page}&page_size=${pageSize}`, { headers: await authHeaders() })
+export async function fetchFiles(page = 1, pageSize = 10, search = ''): Promise<{ files: FileRecord[]; total: number }> {
+  if (isPreview) {
+    const files = [previewFile].filter(file => file.filename.toLowerCase().includes(search.trim().toLowerCase()))
+    return { files: page === 1 ? files : [], total: files.length }
+  }
+  const params = new URLSearchParams({ page: String(page), page_size: String(pageSize), search: search.trim() })
+  const res = await fetch(`${BASE}/v1/files?${params}`, { headers: await authHeaders() })
   return handle(res)
 }
 
