@@ -6,6 +6,7 @@ import { fetchUsers, createUser, resetUserRole } from '../api'
 import type { UserRecord, UserGroup } from '../types'
 import Modal from '../components/Modal'
 import PageHeader from '../components/PageHeader'
+import Select from '../components/Select'
 import { UserPlus, UserMinus, Loader2, ShieldAlert, UsersRound, Mail } from 'lucide-react'
 
 function availableGroups(isSuperAdmin: boolean): UserGroup[] {
@@ -246,16 +247,15 @@ export default function UsersPage() {
             </div>
 
             <FormField label="Department" required>
-              <select value={form.department} onChange={e => setForm({ ...form, department: e.target.value })} className="input">
-                <option value="" disabled>Select a department</option>
-                {DEPARTMENTS.map(d => <option key={d} value={d}>{d}</option>)}
-              </select>
+              <Select label="Department" value={form.department} fullWidth placeholder="Select a department"
+                options={DEPARTMENTS.map(department => ({ value: department, label: department }))}
+                onChange={department => setForm({ ...form, department })} />
             </FormField>
 
             <FormField label="Group" required>
-              <select value={form.group} onChange={e => setForm({ ...form, group: e.target.value as UserGroup })} className="input">
-                {availableGroups(isSuperAdmin).map(g => <option key={g} value={g}>{groupLabel(g)}</option>)}
-              </select>
+              <Select label="Group" value={form.group} fullWidth
+                options={availableGroups(isSuperAdmin).map(group => ({ value: group, label: groupLabel(group) }))}
+                onChange={group => setForm({ ...form, group })} />
             </FormField>
 
             {createError && <div className="alert danger" style={{ marginTop: '14px' }}>{createError}</div>}

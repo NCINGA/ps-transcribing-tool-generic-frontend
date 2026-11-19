@@ -10,6 +10,7 @@ import UsageBarChart from '../components/UsageBarChart'
 import StatCard from '../components/StatCard'
 import TableCard from '../components/TableCard'
 import { zeroFillDaily } from '../utils/usage'
+import Select from '../components/Select'
 
 export default function DashboardPage() {
   const [jobs, setJobs] = useState<Job[]>([])
@@ -115,10 +116,8 @@ export default function DashboardPage() {
 
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px', gap: '12px', flexWrap: 'wrap' }}>
         <h2 style={{ fontSize: '17px', fontWeight: 700 }}>Usage</h2>
-        <select value={days} onChange={e => setDays(Number(e.target.value))} className="input input-sm">
-          <option value={7}>Last 7 days</option>
-          <option value={30}>Last 30 days</option>
-        </select>
+        <Select label="Usage period" value={days} onChange={setDays} small
+          options={[{ value: 7, label: 'Last 7 days' }, { value: 30, label: 'Last 30 days' }]} />
       </div>
 
       <div className="grid grid-2-wide mb-28">

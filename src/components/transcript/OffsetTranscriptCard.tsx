@@ -5,6 +5,7 @@ import Modal from '../Modal'
 import TranscriptLines from '../TranscriptLines'
 import { useEditSessionKeepAlive } from '../../hooks/useEditSessionKeepAlive'
 import { isPreview } from '../../lib/firebase'
+import Select from '../Select'
 
 interface OffsetTranscriptCardProps {
   originalTranscription: string
@@ -114,10 +115,8 @@ export default function OffsetTranscriptCard({ originalTranscription, jobId, fil
           className="input input-sm"
           style={{ width: '84px' }}
         />
-        <select value={period} onChange={e => setPeriod(e.target.value as 'AM' | 'PM')} className="input input-sm" style={{ width: '78px' }}>
-          <option value="AM">AM</option>
-          <option value="PM">PM</option>
-        </select>
+        <Select label="Time of day period" value={period} onChange={setPeriod} small
+          options={[{ value: 'AM', label: 'AM' }, { value: 'PM', label: 'PM' }]} />
         <button onClick={handleApplyOffset} className="btn btn-primary btn-sm">Offset</button>
         {offsetText !== null && (
           <button onClick={handleResetOffset} className="btn btn-secondary btn-sm"><RotateCcw size={13} /> Reset Offset</button>

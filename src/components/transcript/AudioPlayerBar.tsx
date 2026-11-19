@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { Play, Pause, RotateCcw, RotateCw } from 'lucide-react'
 import { fetchFilePresignedUrl } from '../../api'
+import Select from '../Select'
 
 const SEEK_STEP_SECONDS = 5
 const SPEEDS = [0.5, 0.75, 1, 1.25, 1.5, 2]
@@ -15,13 +16,11 @@ function formatTime(seconds: number): string {
   return `${m}:${s.toString().padStart(2, '0')}`
 }
 
-// Hotkeys must not hijack typing in the transcript textareas (or native
-// keyboard interaction with the speed <select>) -- anything with focus that
-// isn't the page background is exempt.
+// Keep playback shortcuts out of editable fields and the speed dropdown.
 function isTypingTarget(target: EventTarget | null): boolean {
   if (!(target instanceof HTMLElement)) return false
   const tag = target.tagName
-  return tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT' || target.isContentEditable
+  return tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT' || target.getAttribute('role') === 'combobox' || target.isContentEditable
 }
 
 export default function AudioPlayerBar({ fileId }: { fileId: string }) {
@@ -187,9 +186,8 @@ export default function AudioPlayerBar({ fileId }: { fileId: string }) {
         style={{ flex: 1, minWidth: '160px' }}
       />
 
-      <select value={speed} onChange={e => setSpeed(Number(e.target.value))} disabled={!audioUrl} className="input input-sm" style={{ width: '78px' }}>
-        {SPEEDS.map(s => <option key={s} value={s}>{s}x</option>)}
-      </select>
+      <Select label="Playback speed" value={speed} onChange={setSpeed} disabled={!audioUrl} small
+        options={SPEEDS.map(value => ({ value, label: `${value}x` }))} />
 
       {loadError && <div style={{ color: 'var(--danger)', fontSize: '12px' }}>{loadError}</div>}
     </div>
